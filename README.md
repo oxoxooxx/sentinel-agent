@@ -48,4 +48,4 @@ For commercial or enterprise licensing: oxoxooxx@gmail.com
 
 ## Author
 
-Kevin Tu / [KTLabs](https://github.com/kevintu117)
+Kevin Tu / [KTLabs](https://github.com/oxoxooxx)
