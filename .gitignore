@@ -1,0 +1,30 @@
+# Build output
+bin/
+dist/
+*.exe
+*.bin
+
+# Go
+*.test
+*.out
+vendor/
+
+# Config (never commit real config)
+config/config.yaml
+config/config.yml
+config/*.local.*
+*.local.*
+
+# Secrets
+.env
+*.pem
+*.key
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp

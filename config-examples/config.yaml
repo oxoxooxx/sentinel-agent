@@ -1,0 +1,31 @@
+# Sentinel Agent - Example Configuration
+# Copy to config/config.yaml and fill in your values
+
+agent:
+  id: "workstation-01"       # Unique identifier for this endpoint
+  server_url: "http://192.168.1.100:8080"  # Sentinel server address
+  report_interval: 30        # Seconds between log flushes
+
+monitor:
+  git:
+    enabled: true
+    alert_on_external_repos: true  # Alert when cloning from non-company domains
+    company_domains:
+      - "github.com/your-company"
+      - "gitlab.your-company.com"
+
+  ai_services:
+    enabled: true
+    upload_threshold_kb: 500  # Alert if upload exceeds this per session
+    domains:
+      - "chat.openai.com"
+      - "api.openai.com"
+      - "notebooklm.google.com"
+      - "claude.ai"
+      - "gemini.google.com"
+      - "api.anthropic.com"
+
+alerting:
+  telegram:
+    bot_token: "YOUR_BOT_TOKEN"
+    chat_id: "YOUR_CHAT_ID"
