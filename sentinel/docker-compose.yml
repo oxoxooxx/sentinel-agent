@@ -1,0 +1,45 @@
+version: "3.9"
+
+services:
+  sentinel:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sentinel
+    restart: unless-stopped
+
+    ports:
+      # UDP syslog（FortiGate 預設送往 514）
+      - "514:514/udp"
+      # HTTP API + webhook 接收
+      - "8080:8080/tcp"
+
+    volumes:
+      # 設定檔（請先 cp config.example.yaml config.yaml 並填入 token）
+      - ./config.yaml:/app/config.yaml:ro
+      # 資料目錄持久化（SQLite 資料庫）
+      - sentinel-data:/app/data
+
+    environment:
+      - SENTINEL_CONFIG=/app/config.yaml
+      # 時區設定（台灣）
+      - TZ=Asia/Taipei
+
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+    # 限制資源使用（輕量監控平台不需太多資源）
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+
+volumes:
+  # 命名 volume，資料在 container 重建後保留
+  sentinel-data:
+    driver: local

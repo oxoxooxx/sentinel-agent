@@ -1,0 +1,28 @@
+server:
+  name: "My Sentinel"
+
+storage:
+  driver: sqlite
+  sqlite:
+    path: ./data/sentinel.db
+    retention_days: 90
+  # postgres:
+  #   dsn: "postgres://user:pass@localhost:5432/sentinel?sslmode=disable"
+
+syslog:
+  port: 514
+  protocol: udp
+
+api:
+  port: 8080
+  secret: "change-me"
+
+alert:
+  channels:
+    - type: line
+      token: "YOUR_LINE_NOTIFY_TOKEN"
+    - type: telegram
+      bot_token: "YOUR_BOT_TOKEN"
+      chat_id: "YOUR_CHAT_ID"
+    # - type: teams
+    #   webhook_url: "https://outlook.office.com/webhook/..."

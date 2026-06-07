@@ -4,6 +4,12 @@ dist/
 *.exe
 *.bin
 
+# Sentinel data directory (SQLite DB)
+sentinel/data/
+
+# Sentinel runtime config (含 token，不 commit)
+sentinel/config.yaml
+
 # Go
 *.test
 *.out
