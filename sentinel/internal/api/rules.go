@@ -6,16 +6,16 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/oxoxooxx/sentinel/internal/storage"
+	eventinfra "github.com/oxoxooxx/sentinel/internal/event/infra"
 )
 
 // RulesHandler 處理規則 CRUD 請求
 type RulesHandler struct {
-	db storage.DB
+	db eventinfra.DB
 }
 
 // NewRulesHandler 建立規則 handler
-func NewRulesHandler(db storage.DB) *RulesHandler {
+func NewRulesHandler(db eventinfra.DB) *RulesHandler {
 	return &RulesHandler{db: db}
 }
 
@@ -47,7 +47,7 @@ func (h *RulesHandler) List(c *gin.Context) {
 	}
 
 	if rules == nil {
-		rules = []storage.Rule{}
+		rules = []eventinfra.Rule{}
 	}
 
 	ok(c, rules)
@@ -66,7 +66,7 @@ func (h *RulesHandler) Create(c *gin.Context) {
 		enabled = *req.Enabled
 	}
 
-	rule := storage.Rule{
+	rule := eventinfra.Rule{
 		Name:        req.Name,
 		Description: req.Description,
 		Enabled:     enabled,
@@ -106,7 +106,7 @@ func (h *RulesHandler) Update(c *gin.Context) {
 		return
 	}
 
-	var existing *storage.Rule
+	var existing *eventinfra.Rule
 	for _, r := range rules {
 		if r.ID == id {
 			copy := r
@@ -121,7 +121,7 @@ func (h *RulesHandler) Update(c *gin.Context) {
 	}
 
 	// 套用部分更新（immutable pattern：建立新物件）
-	updated := storage.Rule{
+	updated := eventinfra.Rule{
 		ID:          existing.ID,
 		Name:        existing.Name,
 		Description: existing.Description,

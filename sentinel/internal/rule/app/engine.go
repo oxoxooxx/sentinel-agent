@@ -1,5 +1,5 @@
-// Package rules 實作告警規則引擎
-package rules
+// Package app — rule 應用層：告警規則引擎
+package app
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/oxoxooxx/sentinel/internal/storage"
+	eventinfra "github.com/oxoxooxx/sentinel/internal/event/infra"
 )
 
 // ConditionType 規則條件類型
@@ -23,12 +23,12 @@ const (
 // Condition 規則條件定義（對應 rules.cond_json）
 type Condition struct {
 	Type      ConditionType `json:"type"`
-	Field     string        `json:"field"`              // 比對的欄位（"message", "raw_log" 等）
-	Keywords  []string      `json:"keywords,omitempty"` // type=keyword 時使用
+	Field     string        `json:"field"`               // 比對的欄位（"message", "raw_log" 等）
+	Keywords  []string      `json:"keywords,omitempty"`  // type=keyword 時使用
 	Threshold int           `json:"threshold,omitempty"` // type=threshold 時使用（N 分鐘內 N 筆）
 	WindowMin int           `json:"window_min,omitempty"` // 閾值時間窗口（分鐘）
 	Whitelist []string      `json:"whitelist,omitempty"` // type=whitelist 時使用
-	Severity  string        `json:"severity,omitempty"` // 觸發告警的嚴重等級
+	Severity  string        `json:"severity,omitempty"`  // 觸發告警的嚴重等級
 }
 
 // MatchResult 規則比對結果
@@ -40,16 +40,16 @@ type MatchResult struct {
 
 // Engine 規則引擎，負責載入規則並對事件進行比對
 type Engine struct {
-	db storage.DB
+	db eventinfra.DB
 }
 
 // NewEngine 建立規則引擎
-func NewEngine(db storage.DB) *Engine {
+func NewEngine(db eventinfra.DB) *Engine {
 	return &Engine{db: db}
 }
 
 // Evaluate 對單筆事件套用所有啟用中的規則，回傳符合的規則列表
-func (e *Engine) Evaluate(ctx context.Context, event storage.Event) ([]MatchResult, error) {
+func (e *Engine) Evaluate(ctx context.Context, event eventinfra.Event) ([]MatchResult, error) {
 	rules, err := e.db.ListRules(ctx, true) // 只取啟用的規則
 	if err != nil {
 		return nil, fmt.Errorf("載入規則失敗: %w", err)
@@ -71,7 +71,7 @@ func (e *Engine) Evaluate(ctx context.Context, event storage.Event) ([]MatchResu
 }
 
 // matchRule 對單一規則進行比對
-func (e *Engine) matchRule(rule storage.Rule, event storage.Event) (MatchResult, error) {
+func (e *Engine) matchRule(rule eventinfra.Rule, event eventinfra.Event) (MatchResult, error) {
 	var cond Condition
 	if err := json.Unmarshal([]byte(rule.CondJSON), &cond); err != nil {
 		return MatchResult{}, fmt.Errorf("解析規則 %d 條件失敗: %w", rule.ID, err)
@@ -99,7 +99,7 @@ func (e *Engine) matchRule(rule storage.Rule, event storage.Event) (MatchResult,
 }
 
 // matchKeyword 關鍵字比對（含任一關鍵字即觸發）
-func matchKeyword(rule storage.Rule, cond Condition, fieldValue string) MatchResult {
+func matchKeyword(rule eventinfra.Rule, cond Condition, fieldValue string) MatchResult {
 	lowerValue := strings.ToLower(fieldValue)
 	for _, kw := range cond.Keywords {
 		if strings.Contains(lowerValue, strings.ToLower(kw)) {
@@ -114,7 +114,7 @@ func matchKeyword(rule storage.Rule, cond Condition, fieldValue string) MatchRes
 }
 
 // matchWhitelist 白名單比對（任一白名單項目命中則排除告警）
-func matchWhitelist(rule storage.Rule, cond Condition, fieldValue string) MatchResult {
+func matchWhitelist(rule eventinfra.Rule, cond Condition, fieldValue string) MatchResult {
 	lowerValue := strings.ToLower(fieldValue)
 	for _, item := range cond.Whitelist {
 		if strings.Contains(lowerValue, strings.ToLower(item)) {
@@ -131,7 +131,7 @@ func matchWhitelist(rule storage.Rule, cond Condition, fieldValue string) MatchR
 }
 
 // extractField 從 Event 中取出指定欄位的字串值
-func extractField(event storage.Event, field string) string {
+func extractField(event eventinfra.Event, field string) string {
 	switch field {
 	case "message":
 		return event.Message

@@ -6,16 +6,16 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/oxoxooxx/sentinel/internal/storage"
+	eventinfra "github.com/oxoxooxx/sentinel/internal/event/infra"
 )
 
 // SourcesHandler 處理事件來源 CRUD 請求
 type SourcesHandler struct {
-	db storage.DB
+	db eventinfra.DB
 }
 
 // NewSourcesHandler 建立來源 handler
-func NewSourcesHandler(db storage.DB) *SourcesHandler {
+func NewSourcesHandler(db eventinfra.DB) *SourcesHandler {
 	return &SourcesHandler{db: db}
 }
 
@@ -37,7 +37,7 @@ func (h *SourcesHandler) List(c *gin.Context) {
 	}
 
 	if sources == nil {
-		sources = []storage.Source{}
+		sources = []eventinfra.Source{}
 	}
 
 	ok(c, sources)
@@ -58,7 +58,7 @@ func (h *SourcesHandler) Create(c *gin.Context) {
 		return
 	}
 
-	source := storage.Source{
+	source := eventinfra.Source{
 		Name:        req.Name,
 		Type:        req.Type,
 		Address:     req.Address,

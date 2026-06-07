@@ -6,30 +6,30 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/oxoxooxx/sentinel/internal/storage"
+	eventinfra "github.com/oxoxooxx/sentinel/internal/event/infra"
 )
 
 // EventsHandler 處理事件相關的 HTTP 請求
 type EventsHandler struct {
-	db storage.DB
+	db eventinfra.DB
 }
 
 // NewEventsHandler 建立事件 handler
-func NewEventsHandler(db storage.DB) *EventsHandler {
+func NewEventsHandler(db eventinfra.DB) *EventsHandler {
 	return &EventsHandler{db: db}
 }
 
 // List 處理 GET /api/events
 // 支援查詢參數：severity, source_id, limit, offset
 func (h *EventsHandler) List(c *gin.Context) {
-	filter := storage.EventFilter{
+	filter := eventinfra.EventFilter{
 		Limit:  100, // 預設最多 100 筆
 		Offset: 0,
 	}
 
 	// 解析 severity 篩選
 	if s := c.Query("severity"); s != "" {
-		sev := storage.Severity(s)
+		sev := eventinfra.Severity(s)
 		filter.Severity = &sev
 	}
 
@@ -78,7 +78,7 @@ func (h *EventsHandler) List(c *gin.Context) {
 
 	// 避免回傳 null，統一回傳空陣列
 	if events == nil {
-		events = []storage.Event{}
+		events = []eventinfra.Event{}
 	}
 
 	okWithTotal(c, events, total)
@@ -93,7 +93,7 @@ func (h *EventsHandler) Get(c *gin.Context) {
 	}
 
 	ctx := c.Request.Context()
-	filter := storage.EventFilter{
+	filter := eventinfra.EventFilter{
 		Limit:  1,
 		Offset: 0,
 	}

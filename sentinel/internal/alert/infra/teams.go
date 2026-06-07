@@ -1,5 +1,5 @@
-// Package alert — Microsoft Teams Webhook 通知頻道
-package alert
+// Package infra — alert 基礎設施層：Microsoft Teams Webhook 通知頻道
+package infra
 
 import (
 	"bytes"

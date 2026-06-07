@@ -1,5 +1,5 @@
-// Package storage — SQLite 實作
-package storage
+// Package infra — event 基礎設施層：SQLite 實作
+package infra
 
 import (
 	"context"

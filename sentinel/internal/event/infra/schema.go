@@ -1,5 +1,5 @@
-// Package storage — 資料庫 schema 定義
-package storage
+// Package infra — event 基礎設施層：資料庫 schema 定義
+package infra
 
 // SQLiteSchema 包含建立所有資料表的 SQL 語句（SQLite 方言）
 // 使用 IF NOT EXISTS，可安全重複執行

@@ -1,5 +1,5 @@
-// Package alert — LINE Notify 通知頻道
-package alert
+// Package infra — alert 基礎設施層：LINE Notify 通知頻道
+package infra
 
 import (
 	"context"

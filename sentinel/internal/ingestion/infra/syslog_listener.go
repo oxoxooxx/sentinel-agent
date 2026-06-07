@@ -1,5 +1,5 @@
-// Package ingestion 負責從各種外部來源接收安全事件
-package ingestion
+// Package infra — ingestion 基礎設施層：UDP syslog 監聽器
+package infra
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/oxoxooxx/sentinel/internal/storage"
+	eventinfra "github.com/oxoxooxx/sentinel/internal/event/infra"
 )
 
 // SyslogMessage 代表一筆解析後的 syslog 訊息
@@ -96,12 +96,12 @@ func (s *SyslogServer) listenLoop(ctx context.Context) error {
 
 // DefaultSyslogHandler 預設的 syslog 處理器，將訊息存入 DB
 type DefaultSyslogHandler struct {
-	db       storage.DB
+	db       eventinfra.DB
 	sourceID int64 // 預設來源 ID（FortiGate）
 }
 
 // NewDefaultSyslogHandler 建立預設 syslog 處理器
-func NewDefaultSyslogHandler(db storage.DB, sourceID int64) *DefaultSyslogHandler {
+func NewDefaultSyslogHandler(db eventinfra.DB, sourceID int64) *DefaultSyslogHandler {
 	return &DefaultSyslogHandler{db: db, sourceID: sourceID}
 }
 
@@ -111,7 +111,7 @@ func (h *DefaultSyslogHandler) HandleSyslog(ctx context.Context, msg SyslogMessa
 	// 目前先直接儲存原始資料，後續版本加入 parser
 	severity, message := parseSeverity(msg.RawData)
 
-	event := storage.Event{
+	event := eventinfra.Event{
 		SourceID:  h.sourceID,
 		RawLog:    msg.RawData,
 		ParsedAt:  msg.ReceivedAt,
@@ -129,14 +129,14 @@ func (h *DefaultSyslogHandler) HandleSyslog(ctx context.Context, msg SyslogMessa
 
 // parseSeverity 從 syslog 原始訊息中推斷嚴重等級
 // 這是簡化實作，後續可擴充為完整的 RFC 5424 parser
-func parseSeverity(raw string) (storage.Severity, string) {
+func parseSeverity(raw string) (eventinfra.Severity, string) {
 	// FortiGate syslog 常見關鍵字判斷
-	keywords := map[string]storage.Severity{
-		"level=emergency": storage.SeverityCritical,
-		"level=alert":     storage.SeverityCritical,
-		"level=critical":  storage.SeverityCritical,
-		"level=error":     storage.SeverityWarning,
-		"level=warning":   storage.SeverityWarning,
+	keywords := map[string]eventinfra.Severity{
+		"level=emergency": eventinfra.SeverityCritical,
+		"level=alert":     eventinfra.SeverityCritical,
+		"level=critical":  eventinfra.SeverityCritical,
+		"level=error":     eventinfra.SeverityWarning,
+		"level=warning":   eventinfra.SeverityWarning,
 	}
 
 	for kw, sev := range keywords {
@@ -145,7 +145,7 @@ func parseSeverity(raw string) (storage.Severity, string) {
 		}
 	}
 
-	return storage.SeverityInfo, raw
+	return eventinfra.SeverityInfo, raw
 }
 
 // containsIgnoreCase 大小寫不敏感的字串搜尋

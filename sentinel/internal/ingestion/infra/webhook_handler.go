@@ -1,5 +1,5 @@
-// Package ingestion — HTTP webhook 接收器
-package ingestion
+// Package infra — ingestion 基礎設施層：HTTP webhook 接收器
+package infra
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/oxoxooxx/sentinel/internal/storage"
+	eventinfra "github.com/oxoxooxx/sentinel/internal/event/infra"
 )
 
 // WebhookPayload 是外部系統 POST 過來的 JSON 格式
@@ -24,12 +24,12 @@ type WebhookPayload struct {
 
 // WebhookServer 提供 HTTP webhook 接收端點
 type WebhookServer struct {
-	db     storage.DB
+	db     eventinfra.DB
 	secret string // Bearer token 驗證（空字串表示不驗證）
 }
 
 // NewWebhookServer 建立 webhook 接收器
-func NewWebhookServer(db storage.DB, secret string) *WebhookServer {
+func NewWebhookServer(db eventinfra.DB, secret string) *WebhookServer {
 	return &WebhookServer{db: db, secret: secret}
 }
 
@@ -87,7 +87,7 @@ func (w *WebhookServer) handleWebhook(rw http.ResponseWriter, r *http.Request) {
 
 // save 將 webhook payload 轉換為 Event 並儲存
 func (w *WebhookServer) save(ctx context.Context, payload WebhookPayload, remoteAddr, rawBody string) error {
-	sev := parseSyslogSeverity(payload.Severity)
+	sev := parseWebhookSeverity(payload.Severity)
 
 	rawLog := payload.RawLog
 	if rawLog == "" {
@@ -99,7 +99,7 @@ func (w *WebhookServer) save(ctx context.Context, payload WebhookPayload, remote
 		extra = string(payload.Extra)
 	}
 
-	event := storage.Event{
+	event := eventinfra.Event{
 		SourceID:  0, // webhook 來源不與特定 source 綁定，後續可依 payload.Source 查詢
 		RawLog:    rawLog,
 		ParsedAt:  time.Now(),
@@ -115,14 +115,14 @@ func (w *WebhookServer) save(ctx context.Context, payload WebhookPayload, remote
 	return nil
 }
 
-// parseSyslogSeverity 將字串轉換為 storage.Severity
-func parseSyslogSeverity(s string) storage.Severity {
+// parseWebhookSeverity 將字串轉換為 Severity
+func parseWebhookSeverity(s string) eventinfra.Severity {
 	switch s {
 	case "critical":
-		return storage.SeverityCritical
+		return eventinfra.SeverityCritical
 	case "warning":
-		return storage.SeverityWarning
+		return eventinfra.SeverityWarning
 	default:
-		return storage.SeverityInfo
+		return eventinfra.SeverityInfo
 	}
 }

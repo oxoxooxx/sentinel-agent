@@ -1,5 +1,5 @@
-// Package storage 定義儲存後端的統一介面與資料模型
-package storage
+// Package infra — event 基礎設施層：儲存後端介面與資料模型
+package infra
 
 import (
 	"context"
@@ -19,10 +19,10 @@ const (
 type AlertStatus string
 
 const (
-	AlertStatusPending    AlertStatus = "pending"    // 尚未處理
-	AlertStatusSent       AlertStatus = "sent"       // 已送出通知
-	AlertStatusAcked      AlertStatus = "acked"      // 已確認
-	AlertStatusResolved   AlertStatus = "resolved"   // 已解決
+	AlertStatusPending  AlertStatus = "pending"  // 尚未處理
+	AlertStatusSent     AlertStatus = "sent"     // 已送出通知
+	AlertStatusAcked    AlertStatus = "acked"    // 已確認
+	AlertStatusResolved AlertStatus = "resolved" // 已解決
 )
 
 // Event 代表一筆從外部來源接收到的安全事件

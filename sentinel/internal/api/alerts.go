@@ -6,25 +6,25 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/oxoxooxx/sentinel/internal/storage"
+	eventinfra "github.com/oxoxooxx/sentinel/internal/event/infra"
 )
 
 // AlertsHandler 處理告警相關的 HTTP 請求
 type AlertsHandler struct {
-	db storage.DB
+	db eventinfra.DB
 }
 
 // NewAlertsHandler 建立告警 handler
-func NewAlertsHandler(db storage.DB) *AlertsHandler {
+func NewAlertsHandler(db eventinfra.DB) *AlertsHandler {
 	return &AlertsHandler{db: db}
 }
 
 // List 處理 GET /api/alerts
 // 支援查詢參數：status, limit, offset
 func (h *AlertsHandler) List(c *gin.Context) {
-	var statusFilter *storage.AlertStatus
+	var statusFilter *eventinfra.AlertStatus
 	if s := c.Query("status"); s != "" {
-		st := storage.AlertStatus(s)
+		st := eventinfra.AlertStatus(s)
 		statusFilter = &st
 	}
 
@@ -57,7 +57,7 @@ func (h *AlertsHandler) List(c *gin.Context) {
 	}
 
 	if alerts == nil {
-		alerts = []storage.Alert{}
+		alerts = []eventinfra.Alert{}
 	}
 
 	ok(c, alerts)
@@ -72,12 +72,12 @@ func (h *AlertsHandler) Ack(c *gin.Context) {
 	}
 
 	ctx := c.Request.Context()
-	if err := h.db.UpdateAlertStatus(ctx, id, storage.AlertStatusAcked); err != nil {
+	if err := h.db.UpdateAlertStatus(ctx, id, eventinfra.AlertStatusAcked); err != nil {
 		fail(c, http.StatusInternalServerError, "更新告警狀態失敗")
 		return
 	}
 
-	ok(c, gin.H{"id": id, "status": storage.AlertStatusAcked})
+	ok(c, gin.H{"id": id, "status": eventinfra.AlertStatusAcked})
 }
 
 // Resolve 處理 PUT /api/alerts/:id/resolve（解決告警）
@@ -89,10 +89,10 @@ func (h *AlertsHandler) Resolve(c *gin.Context) {
 	}
 
 	ctx := c.Request.Context()
-	if err := h.db.UpdateAlertStatus(ctx, id, storage.AlertStatusResolved); err != nil {
+	if err := h.db.UpdateAlertStatus(ctx, id, eventinfra.AlertStatusResolved); err != nil {
 		fail(c, http.StatusInternalServerError, "更新告警狀態失敗")
 		return
 	}
 
-	ok(c, gin.H{"id": id, "status": storage.AlertStatusResolved})
+	ok(c, gin.H{"id": id, "status": eventinfra.AlertStatusResolved})
 }

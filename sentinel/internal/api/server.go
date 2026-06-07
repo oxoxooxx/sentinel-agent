@@ -1,4 +1,5 @@
 // Package api 提供 HTTP REST API 服務
+// Vue 前端靜態檔案透過 go:embed 嵌入（需先執行 npm run build）
 package api
 
 import (
@@ -7,18 +8,22 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/oxoxooxx/sentinel/internal/storage"
+	eventinfra "github.com/oxoxooxx/sentinel/internal/event/infra"
 )
+
+// 佔位：等 Vue build 完成後啟用
+// //go:embed web/dist
+// var webDist embed.FS
 
 // Server HTTP API 伺服器
 type Server struct {
-	db     storage.DB
+	db     eventinfra.DB
 	secret string
 	router *gin.Engine
 }
 
 // NewServer 建立並設定 HTTP API 伺服器
-func NewServer(db storage.DB, secret string) *Server {
+func NewServer(db eventinfra.DB, secret string) *Server {
 	// 生產環境使用 Release 模式，減少 gin 的 debug log
 	gin.SetMode(gin.ReleaseMode)
 

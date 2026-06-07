@@ -1,5 +1,5 @@
-// Package alert 負責告警派送，將告警透過各通知頻道送出
-package alert
+// Package app — alert 應用層：告警派送，將告警透過各通知頻道送出
+package app
 
 import (
 	"context"
@@ -7,7 +7,8 @@ import (
 	"log/slog"
 
 	"github.com/oxoxooxx/sentinel/config"
-	"github.com/oxoxooxx/sentinel/internal/storage"
+	eventinfra "github.com/oxoxooxx/sentinel/internal/event/infra"
+	alertinfra "github.com/oxoxooxx/sentinel/internal/alert/infra"
 )
 
 // Notifier 是通知頻道的統一介面
@@ -20,13 +21,13 @@ type Notifier interface {
 
 // Dispatcher 負責管理多個通知頻道，並派送告警
 type Dispatcher struct {
-	db        storage.DB
+	db        eventinfra.DB
 	notifiers []Notifier
 }
 
 // NewDispatcher 根據設定建立 Dispatcher
 // 依序初始化 LINE、Telegram、Teams 頻道
-func NewDispatcher(db storage.DB, cfg config.AlertConfig) (*Dispatcher, error) {
+func NewDispatcher(db eventinfra.DB, cfg config.AlertConfig) (*Dispatcher, error) {
 	d := &Dispatcher{db: db}
 
 	for _, ch := range cfg.Channels {
@@ -35,11 +36,11 @@ func NewDispatcher(db storage.DB, cfg config.AlertConfig) (*Dispatcher, error) {
 
 		switch ch.Type {
 		case "line":
-			n, err = NewLINENotifier(ch.Token)
+			n, err = alertinfra.NewLINENotifier(ch.Token)
 		case "telegram":
-			n, err = NewTelegramNotifier(ch.BotToken, ch.ChatID)
+			n, err = alertinfra.NewTelegramNotifier(ch.BotToken, ch.ChatID)
 		case "teams":
-			n, err = NewTeamsNotifier(ch.WebhookURL)
+			n, err = alertinfra.NewTeamsNotifier(ch.WebhookURL)
 		default:
 			slog.Warn("未知的通知頻道類型，略過", "type", ch.Type)
 			continue
@@ -57,7 +58,7 @@ func NewDispatcher(db storage.DB, cfg config.AlertConfig) (*Dispatcher, error) {
 
 // Dispatch 將事件觸發的告警送往所有已設定的通知頻道
 // 同時將告警記錄寫入 DB
-func (d *Dispatcher) Dispatch(ctx context.Context, event storage.Event, ruleID int64, message string) error {
+func (d *Dispatcher) Dispatch(ctx context.Context, event eventinfra.Event, ruleID int64, message string) error {
 	if len(d.notifiers) == 0 {
 		slog.Warn("沒有可用的通知頻道，告警未送出", "event_id", event.ID)
 		return nil
@@ -69,15 +70,15 @@ func (d *Dispatcher) Dispatch(ctx context.Context, event storage.Event, ruleID i
 	var lastErr error
 	for _, n := range d.notifiers {
 		// 先建立 pending 記錄
-		alert := storage.Alert{
+		a := eventinfra.Alert{
 			EventID: event.ID,
 			RuleID:  ruleID,
-			Status:  storage.AlertStatusPending,
+			Status:  eventinfra.AlertStatusPending,
 			Channel: n.Name(),
 			Message: alertMsg,
 		}
 
-		saved, err := d.db.SaveAlert(ctx, alert)
+		saved, err := d.db.SaveAlert(ctx, a)
 		if err != nil {
 			slog.Error("儲存告警記錄失敗", "channel", n.Name(), "err", err)
 			lastErr = err
@@ -87,13 +88,13 @@ func (d *Dispatcher) Dispatch(ctx context.Context, event storage.Event, ruleID i
 		// 送出通知
 		if err := n.Send(ctx, alertMsg); err != nil {
 			slog.Error("告警送出失敗", "channel", n.Name(), "err", err)
-			_ = d.db.UpdateAlertStatus(ctx, saved.ID, storage.AlertStatusPending) // 維持 pending 以便重試
+			_ = d.db.UpdateAlertStatus(ctx, saved.ID, eventinfra.AlertStatusPending) // 維持 pending 以便重試
 			lastErr = err
 			continue
 		}
 
 		// 更新為已送出
-		if err := d.db.UpdateAlertStatus(ctx, saved.ID, storage.AlertStatusSent); err != nil {
+		if err := d.db.UpdateAlertStatus(ctx, saved.ID, eventinfra.AlertStatusSent); err != nil {
 			slog.Warn("更新告警狀態失敗", "alert_id", saved.ID, "err", err)
 		}
 
@@ -104,11 +105,11 @@ func (d *Dispatcher) Dispatch(ctx context.Context, event storage.Event, ruleID i
 }
 
 // formatAlertMessage 將事件資訊格式化為告警訊息
-func formatAlertMessage(event storage.Event, ruleMsg string) string {
-	severityEmoji := map[storage.Severity]string{
-		storage.SeverityCritical: "🔴",
-		storage.SeverityWarning:  "🟡",
-		storage.SeverityInfo:     "🔵",
+func formatAlertMessage(event eventinfra.Event, ruleMsg string) string {
+	severityEmoji := map[eventinfra.Severity]string{
+		eventinfra.SeverityCritical: "🔴",
+		eventinfra.SeverityWarning:  "🟡",
+		eventinfra.SeverityInfo:     "🔵",
 	}
 
 	emoji := severityEmoji[event.Severity]

@@ -10,10 +10,10 @@ import (
 	"syscall"
 
 	"github.com/oxoxooxx/sentinel/config"
-	"github.com/oxoxooxx/sentinel/internal/alert"
+	alertapp "github.com/oxoxooxx/sentinel/internal/alert/app"
 	"github.com/oxoxooxx/sentinel/internal/api"
-	"github.com/oxoxooxx/sentinel/internal/ingestion"
-	"github.com/oxoxooxx/sentinel/internal/storage"
+	eventinfra "github.com/oxoxooxx/sentinel/internal/event/infra"
+	ingestinfra "github.com/oxoxooxx/sentinel/internal/ingestion/infra"
 )
 
 func main() {
@@ -52,7 +52,7 @@ func main() {
 	slog.Info("資料庫 schema 就緒")
 
 	// 初始化告警派送器
-	dispatcher, err := alert.NewDispatcher(db, cfg.Alert)
+	dispatcher, err := alertapp.NewDispatcher(db, cfg.Alert)
 	if err != nil {
 		slog.Error("初始化告警派送器失敗", "err", err)
 		os.Exit(1)
@@ -63,8 +63,8 @@ func main() {
 	go func() {
 		// sourceID=1 預設對應第一個 FortiGate 來源
 		// 實際部署時應從 DB 查詢對應的 source ID
-		handler := ingestion.NewDefaultSyslogHandler(db, 1)
-		server := ingestion.NewSyslogServer(cfg.Syslog.Port, handler)
+		handler := ingestinfra.NewDefaultSyslogHandler(db, 1)
+		server := ingestinfra.NewSyslogServer(cfg.Syslog.Port, handler)
 		if err := server.Start(ctx); err != nil {
 			slog.Error("syslog 伺服器錯誤", "err", err)
 		}
@@ -94,14 +94,14 @@ func main() {
 }
 
 // initStorage 根據設定初始化儲存後端
-func initStorage(cfg config.StorageConfig) (storage.DB, error) {
+func initStorage(cfg config.StorageConfig) (eventinfra.DB, error) {
 	switch cfg.Driver {
 	case "sqlite":
 		// 確保資料目錄存在
 		if err := os.MkdirAll(getDir(cfg.SQLite.Path), 0750); err != nil {
 			slog.Warn("無法建立資料目錄", "path", cfg.SQLite.Path, "err", err)
 		}
-		return storage.NewSQLite(cfg.SQLite.Path)
+		return eventinfra.NewSQLite(cfg.SQLite.Path)
 	case "postgres":
 		// TODO: 實作 PostgreSQL 後端
 		slog.Error("PostgreSQL 後端尚未實作，請使用 sqlite")
